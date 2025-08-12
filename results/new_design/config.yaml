@@ -1,0 +1,23 @@
+# config.yaml
+# all units in μm
+simulation:
+  λ: 532e-3   # 532e-3 μm = 532 nm
+  resolution: [2**9, 2**9, 10000*1] #Nx, Ny, Nz
+  # x_start, x_end, y_start, y_end, z_start, z_end
+  range: [-512, 512, -512, 512, 0, 100000] # keep z-resolution at 4μm
+  # 50mm = 50,000μm          # (32+8+4+2+1)*1024 # (32+16+2+1)*1024
+  z_batch_size: 2**5
+  # simulation data that are saved
+save:
+  range: [-128, 128, -128, 128] # x_start, x_end, y_start, y_end range to save (in unit μm)
+
+path:
+  E2: ./E2/tmp
+  results: ./results/tmp
+  aperture: ./aperture/tmp
+
+plot:
+  N_ticks: [8, 8, 8]
+  dp: 2 #decimal place for ticks
+
+
