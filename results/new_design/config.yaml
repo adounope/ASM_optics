@@ -1,0 +1,22 @@
+# config.yaml
+# all units in μm
+simulation:
+  λ: 532e-3   # 532e-3 μm = 532 nm
+  resolution: [2**10, 2**10, 2] #Nx, Ny, Nz
+  # simulation range (in micron) (aperture file will be fitted to this xy range)
+  range: [-512, 512, -512, 512, 0, 1] # x_start, x_end, y_start, y_end, z_start, z_end
+  z_batch_size: 0
+  num_process: 6 # number of parallel computing workers
+save:
+  # simulation range that are saved (in micron)
+  range: [-512, 512, -512, 512] # x_start, x_end, y_start, y_end range to save (in unit μm)
+
+path:
+  # E2: ./E2/tmp
+  # results: ./results/tmp
+  aperture: ./aperture/tmp
+
+plot:
+  N_ticks: [8, 8, 8]
+
+
