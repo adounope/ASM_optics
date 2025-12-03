@@ -1,4 +1,4 @@
-config_paths = ["results/quad_f35_alternate_phase/config.yaml"]
+config_paths = ["results/2fz_f30,40b1,1.5_edge_pass_1024_padx2/config.yaml"]
 import numpy as np; import matplotlib.pyplot as plt
 from datetime import datetime
 import src.ASM as ASM
@@ -16,4 +16,4 @@ for config_path in config_paths:
     # compute
     ASM.ASM_3D_batch_E2_Multi_Process(c.aperture, c.sim.Lx, c.sim.Ly, c.sim.zs, c.λ, c.path.E2, c.sim.z_batch_size, c.saved_xy_range_index, num_process=c.sim.num_process)
     time = datetime.now()
-    print(f'last run: {time.isoformat(timespec='minutes')}')
+    print(f'last run: {time.isoformat(timespec="minutes")}')

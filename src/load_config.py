@@ -36,7 +36,7 @@ def load(config_path):
         if path.aperture[-3:] == 'bmp' or path.aperture[-3:] == 'png':
             aperture = it.img_2_array(path.aperture)
         elif path.aperture[-3:] == 'npy':
-            apreture = np.load(path.aperture)
+            aperture = np.load(path.aperture)
         else:
             print('cannot load aperture file')
         x_start, x_end, y_start, y_end = f(config.save.range) # range
@@ -50,4 +50,49 @@ def load(config_path):
         # plot settings
         Nx_ticks, Ny_ticks, Nz_ticks = f(config.plot.N_ticks)
         x_tick_idxs, y_tick_idxs, z_tick_idxs = np.arange(0, Nx, Nx/Nx_ticks, dtype=int), np.arange(0, Ny, Ny/Ny_ticks, dtype=int), np.arange(0, Nz, Nz/Nz_ticks, dtype=int)
+    return Config
+
+def load_RS(config_path):
+    config = None
+    with open(config_path, 'r') as file:
+        config = Box(yaml.safe_load(file))
+    class Config:
+        π, λ = np.pi, f(config.simulation.λ)
+        k = 2*π/λ
+
+        # simulation config
+        path = config.path
+            # E2
+            # results
+            # aperture
+        class sim:
+            num_process = f(config.simulation.num_process)
+            Nx, Ny, Nz = f(config.simulation.resolution)
+            x_start, x_end, y_start, y_end, z_start, z_end = f(config.simulation.range)
+            z_batch_size = f(config.simulation.z_batch_size)
+            Lx, Ly, Lz = x_end - x_start, y_end - y_start, z_end - z_start
+            xs, ys, zs = np.linspace(x_start, x_end, Nx, endpoint=False), np.linspace(y_start, y_end, Ny, endpoint=False), np.linspace(z_start, z_end, Nz, endpoint=False)
+            Δx, Δy, Δz = xs[1]-xs[0], ys[1]-ys[0], zs[1]-zs[0]
+            xs += Δx/2
+            ys += Δy/2
+            Nx_ticks, Ny_ticks, Nz_ticks = f(config.plot.N_ticks)
+            x_tick_idxs, y_tick_idxs, z_tick_idxs = np.arange(0, Nx, Nx/Nx_ticks, dtype=int), np.arange(0, Ny, Ny/Ny_ticks, dtype=int), np.arange(0, Nz, Nz/Nz_ticks, dtype=int)
+        class A:
+            Nx, Ny = f(config.aperture_spec.resolution)
+            x_start, x_end, y_start, y_end = f(config.aperture_spec.range)
+            Lx, Ly = x_end - x_start, y_end - y_start
+            xs, ys = np.linspace(x_start, x_end, Nx, endpoint=False), np.linspace(y_start, y_end, Ny, endpoint=False)
+            Δx, Δy = xs[1]-xs[0], ys[1]-ys[0]
+            xs += Δx/2
+            ys += Δy/2
+            Nx_ticks, Ny_ticks, _ = f(config.plot.N_ticks)
+            x_tick_idxs, y_tick_idxs = np.arange(0, Nx, Nx/Nx_ticks, dtype=int), np.arange(0, Ny, Ny/Ny_ticks, dtype=int)
+        aperture = None
+        if path.aperture[-3:] == 'bmp' or path.aperture[-3:] == 'png':
+            aperture = it.img_2_array(path.aperture)
+        elif path.aperture[-3:] == 'npy':
+            aperture = np.load(path.aperture)
+        else:
+            print('cannot load aperture file')
+        # plot settings
     return Config

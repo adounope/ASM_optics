@@ -1,0 +1,22 @@
+# config.yaml
+# all units in μm
+simulation:
+  λ: 620e-3   # 532e-3 μm = 532 nm
+  resolution: [300, 300, 2] #Nx, Ny, Nz
+  # simulation range (in micron) (aperture file will be fitted to this xy range)
+  range: [-150, 150, -150, 150, 0, 0] # x_start, x_end, y_start, y_end, z_start, z_end
+  z_batch_size: 16
+  num_process: 1 # number of parallel computing workers
+aperture_spec:
+  range: [-150, 150, -150, 150] # x_start, x_end, y_start, y_end range (in unit μm)
+  resolution: [300, 300]
+
+path:
+  E: ./E/LED_double_collimator
+  results: ./RS_results/LED_double_collimator
+  aperture: ./aperture/tmp # image in _sample is zoomed and zero_padded to increase ASM simulation accuracy
+
+plot:
+  N_ticks: [8, 8, 8]
+
+

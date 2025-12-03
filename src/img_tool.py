@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, FFMpegWriter
+import src.math_tool as mt
 
 # modify ffmpeg_path here
 matplotlib.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
@@ -72,3 +73,18 @@ def conv_lambda2D(arr, kernel_shape = (3,3), f = lambda x: x.mean(axis=(-1,-2)))
         for j in range(out_dim[1]):
             conv_out[..., i, j] = f(arr[..., i:i+kx, j:j+ky])
     return conv_out
+
+def block_edge_mask(Nx, Ny, radius):
+    '''
+    radius <float> in unit of array size
+    return:
+        mask <2darray>
+    '''
+    center_x = (Nx-1)/2
+    center_y = (Ny-1)/2
+    x = np.linspace(0, Nx, Nx, endpoint=False)
+    y = np.linspace(0, Ny, Ny, endpoint=False)
+    x, y = np.meshgrid(x, y, indexing='ij')
+    r = mt.r(x, y, center_x, center_y)
+    mask = (r < radius)
+    return mask

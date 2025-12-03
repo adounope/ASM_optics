@@ -20,6 +20,7 @@ def create_shared_array(arr_shape: tuple, dtype):
     '''
     usage:
     arr, arr_shm, arr_data = create_shared_array(arr_shape=  , dtype=  )
+    arr_shm.close(); arr_shm.unlink()
     '''
     shm = shared_memory.SharedMemory(create=True, size=np.prod(arr_shape)*np.dtype(dtype).itemsize)
     arr = np.ndarray(arr_shape, dtype=dtype, buffer=shm.buf)
@@ -29,6 +30,7 @@ def load_shared_array(arr_shm_name: str, shape, dtype):
     '''
     usage:
     arr, arr_shm = load_shared_array(*arr_data)
+    arr_shm.close()
     '''
     shm = shared_memory.SharedMemory(name=arr_shm_name)
     arr = np.ndarray(shape, dtype, buffer=shm.buf)

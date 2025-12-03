@@ -1,12 +1,13 @@
 E2
-img/*
-!img/_sample*
 aperture/*
 !aperture/_sample*
 !aperture/product
 results/*
 !results/_sample*
 !results/_sample*/**
+!results/LED*
+!results/LED*/**
 !results/new_design
 !results/new_design/**
 src/__pycache__
+.venv

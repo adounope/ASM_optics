@@ -1,0 +1,22 @@
+# config.yaml
+# all units in μm
+simulation:
+  λ: 532e-3   # 532e-3 μm = 532 nm
+  resolution: [300, 300, 1000] #Nx, Ny, Nz
+  # simulation range (in micron) (aperture file will be fitted to this xy range)
+  range: [-150, 150, -150, 150, 0, 1e6] # x_start, x_end, y_start, y_end, z_start, z_end
+  z_batch_size: 4
+  num_process: 6 # number of parallel computing workers
+aperture_spec:
+  range: [-150, 150, -150, 150] # x_start, x_end, y_start, y_end range (in unit μm)
+  resolution: [300*2, 300*2]
+
+path:
+  E: ./E/collimator_220μm_300_zoomx2
+  results: ./RS_results/collimator_220μm_300_zoomx2.yaml
+  aperture: ./aperture/collimator_220μm_300_zoomx2.bmp # image in _sample is zoomed and zero_padded to increase ASM simulation accuracy
+
+plot:
+  N_ticks: [8, 8, 8]
+
+

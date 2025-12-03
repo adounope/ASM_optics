@@ -12,6 +12,33 @@ from multiprocessing import Process, shared_memory
 # %matplotlib ipympl
 π=np.pi
 
+def Angular_intensity_dist(A_xy, Lx, Ly, λ):
+    # eg: wave component amplitude to direction
+    #       kx[i,j], ky[i,j] is FFT_A_spectrum[i,j]
+    Nx, Ny = A_xy.shape
+    k=π*2/λ
+    # x, y domain unit:
+        # n * Lx / N = distance (m)
+        # n = N*distance/Lx
+    FFT_A = np.fft.fft2(A_xy) # Nx, Ny # domain: 0 to N-1
+    # FFT_A domain unit:
+        # n (wavelength / array) = Lx (meter / array) / λ (meter / wavelength)
+        # n = Lx / λ (wavelength / array)
+    tmp_x = np.fft.fftfreq(Nx, 1/Nx).astype(complex) # domain of FFT # value [0,1,... N/2-1, -N/2, -N/2+1, ..., -1]
+    tmp_y = np.fft.fftfreq(Ny, 1/Ny).astype(complex) # complex to avoid sqrt(-1) being nan
+    # kx domain unit:
+        # n = 2π/λ = FFT_A_n * 2π/Lx
+    kx = tmp_x * 2*π/Lx
+    ky = tmp_y * 2*π/Ly
+    kx, ky = np.meshgrid(kx, ky, indexing='ij')
+    # propagation angle of component plane wave from forward normal
+    kθ = np.arcsin(np.sqrt( kx**2 + ky**2 ) /(2*π/λ))*180/π # Nx, Ny
+    xθ = np.arcsin(kx/(2*π/λ))*180/π
+    yθ = np.arcsin(ky/(2*π/λ))*180/π
+    FFT_A[kθ.real > 89.99] = 0 #ignore evanescent component
+    intensity_dist = np.abs(FFT_A)**2  # intensity vs plane wave propagation angle
+    return intensity_dist, kθ, xθ, yθ
+
 def ASM_3D(A_xy, Lx, Ly, zs, λ):
     '''
     if not enough RAM, use ASM_3D_batch instead
@@ -37,6 +64,8 @@ def ASM_3D(A_xy, Lx, Ly, zs, λ):
         # n = 2π/λ = FFT_A_n * 2π/Lx
     kx = tmp_x * 2*π/Lx
     ky = tmp_y * 2*π/Ly
+    print(f'max kx = {kx.max()}, max x angle = {np.arcsin(kx.max()/(2*π/λ))*180/π} degree')
+    print(f'max ky = {ky.max()}, max y angle = {np.arcsin(ky.max()/(2*π/λ))*180/π} degree')
     kx, ky = np.meshgrid(kx, ky, indexing='ij')
     # H = e^(i*sqrt(k**2 - kx**2 - ky**2 ) * z) # transfer function # domain: -(2π/L * N/2) to (2π/L * N/2)
     out = FFT_A * np.exp(1.0j*(k**2-kx[:, :, None]**2-ky[:, :, None]**2)**0.5 * zs) # memory spike
@@ -73,6 +102,16 @@ def ASM_3D_batch_E2(A_xy, Lx, Ly, zs, λ, path, batch_size, xy_range_idx=None):
 def batch_E2_extract(Nx, Ny, Nz, path, batch_size):
     batch_idx = utils.batch_idx(Nz, batch_size)
     E2 = np.empty([Nx, Ny, Nz], dtype=np.float32)
+
+    for count, idx in enumerate(tqdm(batch_idx, desc='extracting')):
+        s, e = idx
+        tmp = np.load(f'{path}/{count}.npy')
+        E2[:, :, s:e] = tmp
+    return E2
+
+def batch_E_extract(Nx, Ny, Nz, path, batch_size):
+    batch_idx = utils.batch_idx(Nz, batch_size)
+    E2 = np.empty([Nx, Ny, Nz], dtype=np.complex128)
 
     for count, idx in enumerate(tqdm(batch_idx, desc='extracting')):
         s, e = idx
@@ -172,6 +211,57 @@ def ASM_3D_batch_E2_Multi_Process(A_xy, Lx, Ly, zs, λ, path, batch_size, xy_ran
             E = np.fft.ifft2( FFT_A[:, :, None] * np.exp(1.0j*kz[:, :, None]*zs2[s:e]) , axes=(0, 1))[x1: x2+1, y1:y2+1]
             E2 = E; np.abs(E2, out=E2); E2 *= E2
             np.save(f'{path}/{count}.npy', E2.astype(np.float32))
+
+        FFT_A_shm.close()
+        kz_shm.close()
+        zs2_shm.close()
+    processes = []
+    for p_idx in range(num_process):
+        processes.append(Process(target=worker, args=(p_idx,) ) )
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
+    kz_shm.close(); kz_shm.unlink()
+    FFT_A_shm.close(); FFT_A_shm.unlink()
+    zs2_shm.close(); zs2_shm.unlink()
+
+def ASM_3D_batch_E_Multi_Process(A_xy, Lx, Ly, zs, λ, path, batch_size, xy_range_idx=None, num_process=4):
+    # only store intensity as float32, reduce storage
+    '''
+    xy_range_index <tuple<int, int, int, int>> x_start, x_end, y_start, y_end (ends are inclusive)
+    '''
+    Nx, Ny = A_xy.shape
+    x1, x2, y1, y2 = 0, Nx-1, 0, Ny-1
+    if xy_range_idx is not None:
+        x1, x2, y1, y2 = xy_range_idx
+    Nz = len(zs)
+    os.system(f'mkdir -p {path}')
+    batch_idx = utils.batch_idx(Nz, batch_size)
+
+    k=π*2/λ
+    kx = np.fft.fftfreq(Nx, 1/Nx).astype(complex)* 2*π/Lx
+    ky = np.fft.fftfreq(Ny, 1/Ny).astype(complex)* 2*π/Ly
+    kx, ky = np.meshgrid(kx, ky, indexing='ij')
+    kz, kz_shm, kz_data = utils.create_shared_array(arr_shape=(Nx, Ny), dtype=np.complex128)
+    kz[:] = (k**2-kx**2-ky**2)**0.5 # Nx, Ny
+    del kx, ky
+    gc.collect()
+    FFT_A, FFT_A_shm, FFT_A_data = utils.create_shared_array(arr_shape=(Nx, Ny), dtype=np.complex128)
+    FFT_A[:] = np.fft.fft2(A_xy) # Nx, Ny # domain: 0 to N-1
+    zs2, zs2_shm, zs2_data = utils.create_shared_array(arr_shape=zs.shape, dtype=zs.dtype)
+    zs2[:] = zs
+
+    def worker(p_idx):
+        FFT_A, FFT_A_shm = utils.load_shared_array(*FFT_A_data)
+        kz, kz_shm = utils.load_shared_array(*kz_data)
+        zs2, zs2_shm = utils.load_shared_array(*zs2_data)
+        for idx in tqdm(batch_idx[p_idx::num_process], desc='ASM simulation'):
+            s, e = idx
+            count = s//batch_size
+            E = np.fft.ifft2( FFT_A[:, :, None] * np.exp(1.0j*kz[:, :, None]*zs2[s:e]) , axes=(0, 1))[x1: x2, y1:y2]
+            #E2 = E; np.abs(E2, out=E2); E2 *= E2
+            np.save(f'{path}/{count}.npy', E)#2.astype(np.float32))
 
         FFT_A_shm.close()
         kz_shm.close()
